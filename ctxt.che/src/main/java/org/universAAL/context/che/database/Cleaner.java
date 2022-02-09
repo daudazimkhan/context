@@ -21,6 +21,8 @@
  */
 package org.universAAL.context.che.database;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Properties;
@@ -81,9 +83,34 @@ public class Cleaner extends TimerTask {
 			}
 			t.schedule(new Punctual(db), new Date(now.getTimeInMillis()));
 		}
-
+		
+		// Delete HOURS.TO.REMOVE hours of oldest records if database size has reached DB.MAX.SIZE
+		if (db.dbSizeLimitReached()) {
+			long alreadyRemovedTillTimestamp = Long.parseLong(Hub.getProperties().getProperty("ALREADY.REMOVED.TILL.TIMESTAMP", "0"));
+			long millisecondsToRemove = Long.parseLong(Hub.getProperties().getProperty("HOURS.TO.REMOVE", "168")) * 3600000;
+			
+			if (alreadyRemovedTillTimestamp == 0) {
+				int keep = Integer.parseInt(Hub.getProperties().getProperty("RECYCLE.KEEP", "2"));
+				if (keep <= 0) {
+					keep = 1; // At least 1 month. 0 not allowed.
+				}
+				long keepl = keep * 2592000000L; // Months in ms
+				alreadyRemovedTillTimestamp = System.currentTimeMillis() - keepl;
+			}
+			
+			long removeBeforeTimestamp = alreadyRemovedTillTimestamp + millisecondsToRemove;
+						
+			// DB removes values prior to the argument passed
+			db.removeOldEvents(removeBeforeTimestamp);
+			
+			// And now update the time of the timestamp till which data is already removed
+			Properties props = Hub.getProperties();
+			props.setProperty("ALREADY.REMOVED.TILL.TIMESTAMP", String.valueOf(removeBeforeTimestamp));
+			Hub.setProperties(props);
+		}
+		
 	}
-
+	
 	/**
 	 * Auxiliary class used to perform the removal at a specified hour.
 	 *

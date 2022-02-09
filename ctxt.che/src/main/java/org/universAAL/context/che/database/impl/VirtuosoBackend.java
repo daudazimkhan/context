@@ -1,60 +1,5 @@
-/*
-	Copyright 2015 ITACA-SABIEN, http://www.sabien.upv.es
-	Instituto Tecnologico de Aplicaciones de Comunicacion
-	Avanzadas - Grupo Tecnologias para la Salud y el
-	Bienestar (SABIEN)
-
-	See the NOTICE file distributed with this work for additional
-	information regarding copyright ownership
-
-	Licensed under the Apache License, Version 2.0 (the "License");
-	you may not use this file except in compliance with the License.
-	You may obtain a copy of the License at
-
-	  http://www.apache.org/licenses/LICENSE-2.0
-
-	Unless required by applicable law or agreed to in writing, software
-	distributed under the License is distributed on an "AS IS" BASIS,
-	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	See the License for the specific language governing permissions and
-	limitations under the License.
- */
 package org.universAAL.context.che.database.impl;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileWriter;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringReader;
-import java.io.UnsupportedEncodingException;
-import java.nio.channels.FileChannel;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Properties;
-import java.util.concurrent.atomic.AtomicLong;
-
-import javax.xml.datatype.Duration;
-import javax.xml.datatype.XMLGregorianCalendar;
-
-import org.universAAL.context.che.Hub;
-import org.universAAL.context.che.Hub.Log;
-import org.universAAL.context.che.database.Backend;
-import org.universAAL.middleware.container.utils.StringUtils;
-import org.universAAL.middleware.context.ContextEvent;
-import org.universAAL.middleware.context.owl.ContextProvider;
-import org.universAAL.middleware.rdf.Resource;
-import org.universAAL.middleware.serialization.MessageContentSerializer;
-import org.universAAL.middleware.util.Constants;
 import org.eclipse.rdf4j.RDF4JException;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Value;
@@ -73,34 +18,54 @@ import org.eclipse.rdf4j.query.resultio.sparqlxml.SPARQLResultsXMLWriter;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
-import org.eclipse.rdf4j.repository.sail.SailRepository;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFParseException;
 import org.eclipse.rdf4j.rio.RDFWriter;
 import org.eclipse.rdf4j.rio.turtle.TurtleWriterFactory;
-import org.eclipse.rdf4j.sail.nativerdf.NativeStore;
-import org.eclipse.rdf4j.sail.inferencer.fc.ForwardChainingRDFSInferencer;
+import org.universAAL.context.che.Hub;
+import org.universAAL.context.che.Hub.Log;
+import org.universAAL.context.che.database.Backend;
+import org.universAAL.middleware.container.utils.StringUtils;
+import org.universAAL.middleware.context.ContextEvent;
+import org.universAAL.middleware.context.owl.ContextProvider;
+import org.universAAL.middleware.rdf.Resource;
+import org.universAAL.middleware.serialization.MessageContentSerializer;
+import org.universAAL.middleware.util.Constants;
 
-/**
- * Implementation of {@link org.universAAL.context.che.database.Backend} that
- * uses RDF4J to store and retrieve the context events in/from an underlying
- * store server (a SAIL in RDF4J). In this case it uses the RDF4J native
- * Filesystem repository, interfaced with a forward chaining RDFS inferencer.
- *
- * @author <a href="mailto:alfiva@itaca.upv.es">Alvaro Fides Valero</a>
- *
- */
-public class RDF4JBackend implements Backend {
+import virtuoso.rdf4j.driver.VirtuosoRepository;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
+import java.nio.channels.FileChannel;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Properties;
+
+import javax.xml.datatype.Duration;
+import javax.xml.datatype.XMLGregorianCalendar;
+
+public class VirtuosoBackend implements Backend {
+	
 	/**
 	 * Logger.
 	 */
-	private static Log log = Hub.getLog(RDF4JBackend.class);
+	private static Log log = Hub.getLog(VirtuosoBackend.class);
 	/**
-	 * The RDF4J store.
+	 * The Virtuoso store.
 	 */
 	Repository myRepository;
 	/**
-	 * The connection to the RDF4J store
+	 * The connection to the Virtuoso store
 	 */
 	RepositoryConnection con;
 	/**
@@ -126,37 +91,38 @@ public class RDF4JBackend implements Backend {
 	 * Determines if data is stored/queried in tenant-aware mode
 	 */
 	public static Boolean tenantAware = Boolean.parseBoolean(Hub.getProperties().getProperty("STORE.TENANT", "true"));
-
+	/**
+	 * URL of the running Virtuoso's JDBC server e.g. "jdbc:virtuoso://localhost:1111/"
+	 */
+	protected static final String VIRTUOSO_JDBC_URL = Hub.getProperties().getProperty("VIRTUOSO.JDBC.URL");
+	/**
+	 * Username of the account having update and query rights on the graph
+	 */
+	protected static final String VIRTUOSO_USER = Hub.getProperties().getProperty("VIRTUOSO.USER");
+	/**
+	 * Password of the account
+	 */
+	protected static final String VIRTUOSO_PASSWORD = Hub.getProperties().getProperty("VIRTUOSO.PASSWORD");
+	/**
+	 * IRI of the Graph where data is/will be stored e.g. "http://demo.openlinksw.com/demo#this" 
+	 */
+	protected static final String VIRTUOSO_GRAPH = Hub.getProperties().getProperty("VIRTUOSO.GRAPH");
+	
 	/*
 	 * (non-Javadoc)
 	 *
 	 * @see org.universAAL.context.che.database.Backend#connect()
 	 */
 	synchronized public void connect() {
-		String dataPath = Hub.getProperties().getProperty("STORE.LOCATION");
-		// I use C:/Proyectos/UNIVERSAAL/ContextStore/Stores/SAIL_FCRDFS_Native
-		if (dataPath != null) {
-			File dataDir = new File(dataPath);
-			String indexes = "spoc,posc,cosp";
-			// TODO: Change indexes (specially if we dont use contexts)
-			log.info("CHe connects to {} ", dataDir.toString());
-			// TODO: Study other reasoners, if any
-			try {
-				myRepository = new SailRepository(new ForwardChainingRDFSInferencer(new NativeStore(dataDir, indexes)));
-				myRepository.initialize();
-				con = myRepository.getConnection();
-				if (Boolean.parseBoolean(Hub.getProperties().getProperty("STORE.PRELOAD"))) {
-					this.populate();
-				}
-			} catch (Exception e) {
-				log.error("connect", "Exception trying to initilaize the store: {} ", e);
-				e.printStackTrace();
+		try {
+			myRepository = new VirtuosoRepository(VIRTUOSO_JDBC_URL,VIRTUOSO_USER,VIRTUOSO_PASSWORD,VIRTUOSO_GRAPH);
+			con = myRepository.getConnection();
+			if (Boolean.parseBoolean(Hub.getProperties().getProperty("STORE.PRELOAD"))) {
+				this.populate();
 			}
-		} else {
-			log.error("connect",
-					"No location specified for the store. " + "Add and specify the configuration parameter "
-							+ "STORE.LOCATION to the configuration file of "
-							+ "the CHE pointing to a valid folder path.");
+		} catch (Exception e) {
+			log.error("connect", "Exception trying to initilaize the store: {} ", e);
+			e.printStackTrace();
 		}
 	}
 
@@ -261,40 +227,32 @@ public class RDF4JBackend implements Backend {
 	 */
 	synchronized public void storeEvent(ContextEvent e) {
 		try {
-			// RepositoryConnection con = myRepository.getConnection();
-			try {
-				log.debug("storeEvent", "Adding event to store");
-				if (tenantAware) {
-					// Tenant-aware enabled: add tenants as RDF context
-					List scopeList = e.getScopes();
-					if (scopeList.isEmpty()) {
-						// No tenants, do as always
-						con.add(new StringReader(serializer.serialize(e)), e.getURI(), RDFFormat.TURTLE);
-					} else {
-						ValueFactory f = myRepository.getValueFactory();
-						String[] scopeArray = (String[]) scopeList.toArray(new String[0]);
-						IRI[] contextArray = new IRI[scopeArray.length];
-						for (int i = 0; i < scopeArray.length; i++) {
-							// Check that scope is valid URI
-							contextArray[i] = f.createIRI(Resource.isQualifiedName(scopeArray[i]) ? scopeArray[i]
-									: Constants.MIDDLEWARE_LOCAL_ID_PREFIX + scopeArray[i]);
-						}
-						// store with associated tenants
-						con.add(new StringReader(serializer.serialize(e)), e.getURI(), RDFFormat.TURTLE, contextArray);
-					}
-				} else {
-					// Not tenant-aware, store in default RDF context
+			log.debug("storeEvent", "Adding event to store");
+			if (tenantAware) {
+				// Tenant-aware enabled: add tenants as RDF context
+				List scopeList = e.getScopes();
+				if (scopeList.isEmpty()) {
+					// No tenants, do as always
 					con.add(new StringReader(serializer.serialize(e)), e.getURI(), RDFFormat.TURTLE);
+				} else {
+					ValueFactory f = myRepository.getValueFactory();
+					String[] scopeArray = (String[]) scopeList.toArray(new String[0]);
+					IRI[] contextArray = new IRI[scopeArray.length];
+					for (int i = 0; i < scopeArray.length; i++) {
+						// Check that scope is valid URI
+						contextArray[i] = f.createIRI(Resource.isQualifiedName(scopeArray[i]) ? scopeArray[i]
+								: Constants.MIDDLEWARE_LOCAL_ID_PREFIX + scopeArray[i]);
+					}
+					// store with associated tenants
+					con.add(new StringReader(serializer.serialize(e)), e.getURI(), RDFFormat.TURTLE, contextArray);
 				}
-				log.debug("storeEvent", "Successfully added event to store");
-			} catch (IOException exc) {
-				log.error("storeEvent", "Error trying to add event to the store. " + " Because: {}", exc);
-				exc.printStackTrace();
-			} finally {
-				// con.close();
+			} else {
+				// Not tenant-aware, store in default RDF context
+				con.add(new StringReader(serializer.serialize(e)), e.getURI(), RDFFormat.TURTLE);
 			}
-		} catch (RDF4JException exc) {
-			log.error("storeEvent", "Error trying to get connection to store: {}", exc);
+			log.debug("storeEvent", "Successfully added event to store");
+		} catch (IOException exc) {
+			log.error("storeEvent", "Error trying to add event to the store. " + " Because: {}", exc);
 			exc.printStackTrace();
 		}
 	}
@@ -308,8 +266,6 @@ public class RDF4JBackend implements Backend {
 	synchronized public String queryBySPARQL(String input, String... scopeArray) {
 		log.debug("queryBySPARQL", "queryBySPARQL");
 		String result = null;
-		try {
-			// RepositoryConnection con = myRepository.getConnection();
 			try {
 				ByteArrayOutputStream stream = new ByteArrayOutputStream();
 				// Find out if the call has scope and set it as dataset
@@ -372,16 +328,7 @@ public class RDF4JBackend implements Backend {
 			} catch (UnsupportedEncodingException e) {
 				log.error("queryBySPARQL", "Could not parse results to UTF-8 encoding");
 				e.printStackTrace();
-			} finally {
-				// con.close();
 			}
-		} catch (RDF4JException exc) {
-			log.error("queryBySPARQL", "Error trying to get connection to store: {}", exc);
-			exc.printStackTrace();
-		} catch (Exception exc) {
-			log.error("queryBySPARQL", "Unknown Error handling SPARQL: {}", exc);
-			exc.printStackTrace();
-		}
 		return result;
 	}
 
@@ -775,29 +722,44 @@ public class RDF4JBackend implements Backend {
 		}
 		return ds;
 	}
-	
+
 	public Boolean dbSizeLimitReached() {
 		Boolean limitReached = false;
-		
-		final AtomicLong size = new AtomicLong(0);
-	    Path folder = Paths.get(Hub.getProperties().getProperty("STORE.LOCATION"));
+		Path dbFilePath = Paths.get(Hub.getProperties().getProperty("VIRTUOSO.DB.LOCATION"));
 	    try {
-			Files.walkFileTree(folder, new SimpleFileVisitor<Path>() {
-			    @Override
-			    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) 
-			      throws IOException {
-			        size.addAndGet(attrs.size());
-			        return FileVisitResult.CONTINUE;
-			    }
-			});
-			if (size.longValue() >= Long.parseLong(Hub.getProperties().getProperty("DB.MAX.SIZE"))) {
+			FileChannel dbFileChannel = FileChannel.open(dbFilePath);
+			if (dbFileChannel.size() >= Long.parseLong(Hub.getProperties().getProperty("DB.MAX.SIZE"))) {
 				limitReached = true;
 			}
-		} catch (IOException e1) {
-			e1.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
-	    
 	    return limitReached;
 	}
+	
+	
+	/*
+    public static void main(String[] args) {
 
+        Repository myRepository = new VirtuosoRepository("jdbc:virtuoso://localhost:1111/","dba","dba", "http://demo.openlinksw.com/demo#this");
+
+        try {
+            RepositoryConnection con = myRepository.getConnection();
+            try {
+                con.add(new File("C:/Users/D3--/Desktop/example.ttl"), "http://example.org/example/baseURI", RDFFormat.TURTLE);
+
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                con.close();
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        System.out.println("End");
+    }
+    */
 }

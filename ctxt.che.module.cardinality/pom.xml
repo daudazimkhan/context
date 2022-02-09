@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.universAAL.context</groupId>
@@ -11,7 +11,7 @@
   <artifactId>ctxt.che.module.cardinality</artifactId>
   <version>3.4.2-SNAPSHOT</version>
   <packaging>bundle</packaging>
-  <name>universAAL Context CHE - Module for rdf4j store with cardinality</name>
+  <name>universAAL Context CHE - Module for rdf4j and virtuoso store with cardinality</name>
   <description>This is a bundle fragment module for ctxt.che. It allows the usage of additional store engines enabling cardinality reasoning, confidence and encryption</description>
   <dependencies>
     <dependency>
@@ -22,6 +22,17 @@
       <groupId>org.universAAL.context</groupId>
       <artifactId>rdf4j.uaal.store</artifactId>
       <version>3.4.2-SNAPSHOT</version>
+    </dependency>
+	<!-- virtuoso dependencies. -->
+    <dependency>
+      <groupId>org.openlink</groupId>
+      <artifactId>jdbc</artifactId>
+      <version>4.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openlink</groupId>
+      <artifactId>rdf4j</artifactId>
+      <version>2.1.4</version>
     </dependency>
     <!-- rdf4j dependencies. Instead of using a "bundling" dependency, this granular 
 		approach allows later importing only the transitive deps that are really 

@@ -36,8 +36,19 @@
       <groupId>org.osgi</groupId>
       <artifactId>org.osgi.core</artifactId>
     </dependency>
-	<!-- rdf4j dependencies. Instead of using a "bundling" dependency, this granular 
-		approach allows later importing only the transitive deps that are really 
+	<!-- virtuoso dependencies. -->
+    <dependency>
+      <groupId>org.openlink</groupId>
+      <artifactId>jdbc</artifactId>
+      <version>4.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.openlink</groupId>
+      <artifactId>rdf4j</artifactId>
+      <version>2.1.4</version>
+    </dependency>
+	<!-- rdf4j dependencies. Instead of using a "bundling" dependency, this granular
+		approach allows later importing only the transitive deps that are really
 		needed. -->
     <dependency>
       <groupId>org.eclipse.rdf4j</groupId>

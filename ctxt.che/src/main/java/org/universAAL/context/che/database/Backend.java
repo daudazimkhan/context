@@ -313,4 +313,9 @@ public interface Backend {
 	 * @throws IOException
 	 */
 	public void populate(String owlFileName) throws RepositoryException, RDFParseException, IOException;
+
+	/**
+	 * Returns true if the size of database has reached it specified Limit DB.MAX.SIZE
+	 */
+	public Boolean dbSizeLimitReached();
 }
