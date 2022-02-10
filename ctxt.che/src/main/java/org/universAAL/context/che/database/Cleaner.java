@@ -84,8 +84,9 @@ public class Cleaner extends TimerTask {
 			t.schedule(new Punctual(db), new Date(now.getTimeInMillis()));
 		}
 		
-		// Delete HOURS.TO.REMOVE hours of oldest records if database size has reached DB.MAX.SIZE
-		if (db.dbSizeLimitReached()) {
+		// Delete HOURS.TO.REMOVE hours of oldest records if database size has reached DB.MAX.SIZE (defaults to 10 GB)
+		Long dbMaxSize = Long.parseLong(Hub.getProperties().getProperty("DB.MAX.SIZE", "10737418240"));
+		if (db.dbSizeLimitReached(dbMaxSize)) {
 			long alreadyRemovedTillTimestamp = Long.parseLong(Hub.getProperties().getProperty("ALREADY.REMOVED.TILL.TIMESTAMP", "0"));
 			long millisecondsToRemove = Long.parseLong(Hub.getProperties().getProperty("HOURS.TO.REMOVE", "168")) * 3600000;
 			

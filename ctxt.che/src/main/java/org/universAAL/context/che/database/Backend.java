@@ -316,6 +316,7 @@ public interface Backend {
 
 	/**
 	 * Returns true if the size of database has reached it specified Limit DB.MAX.SIZE
+	 * @param dbMaxSize 
 	 */
-	public Boolean dbSizeLimitReached();
+	public Boolean dbSizeLimitReached(Long dbMaxSize);
 }

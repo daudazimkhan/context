@@ -723,12 +723,12 @@ public class VirtuosoBackend implements Backend {
 		return ds;
 	}
 
-	public Boolean dbSizeLimitReached() {
+	public Boolean dbSizeLimitReached(Long dbMaxSize) {
 		Boolean limitReached = false;
 		Path dbFilePath = Paths.get(Hub.getProperties().getProperty("VIRTUOSO.DB.LOCATION"));
 	    try {
 			FileChannel dbFileChannel = FileChannel.open(dbFilePath);
-			if (dbFileChannel.size() >= Long.parseLong(Hub.getProperties().getProperty("DB.MAX.SIZE"))) {
+			if (dbFileChannel.size() >= dbMaxSize) {
 				limitReached = true;
 			}
 		} catch (IOException e) {
@@ -736,30 +736,4 @@ public class VirtuosoBackend implements Backend {
 		}
 	    return limitReached;
 	}
-	
-	
-	/*
-    public static void main(String[] args) {
-
-        Repository myRepository = new VirtuosoRepository("jdbc:virtuoso://localhost:1111/","dba","dba", "http://demo.openlinksw.com/demo#this");
-
-        try {
-            RepositoryConnection con = myRepository.getConnection();
-            try {
-                con.add(new File("C:/Users/D3--/Desktop/example.ttl"), "http://example.org/example/baseURI", RDFFormat.TURTLE);
-
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                con.close();
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        System.out.println("End");
-    }
-    */
 }

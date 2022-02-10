@@ -776,7 +776,7 @@ public class RDF4JBackend implements Backend {
 		return ds;
 	}
 	
-	public Boolean dbSizeLimitReached() {
+	public Boolean dbSizeLimitReached(Long dbMaxSize) {
 		Boolean limitReached = false;
 		
 		final AtomicLong size = new AtomicLong(0);
@@ -790,7 +790,7 @@ public class RDF4JBackend implements Backend {
 			        return FileVisitResult.CONTINUE;
 			    }
 			});
-			if (size.longValue() >= Long.parseLong(Hub.getProperties().getProperty("DB.MAX.SIZE"))) {
+			if (size.longValue() >= dbMaxSize) {
 				limitReached = true;
 			}
 		} catch (IOException e1) {
